@@ -4,8 +4,35 @@ export function useSanctuaryConversation() {
   const [isListening, setIsListening] = useState(false)
   const [transcript, setTranscript] = useState('')
   const [aiResponse, setAiResponse] = useState('')
+  const [dynamicVoiceId, setDynamicVoiceId] = useState<string | null>(null)
 
-  // 1. Listen to user speech from the headset/browser mic
+  // 1. Automatically clone voice from the uploaded file when user selects it
+  const createVoiceCloneFromFile = async (videoFile: File) => {
+    const ELEVEN_LABS_API_KEY = 'YOUR_API_KEY_HERE' // Only needs the API key now!
+    
+    const formData = new FormData()
+    formData.append('name', `Memory_Clone_${Date.now()}`)
+    formData.append('files', videoFile) // ElevenLabs accepts video/audio files directly to extract voice
+
+    try {
+      const response = await fetch('https://api.elevenlabs.io/v1/voices/add', {
+        method: 'POST',
+        headers: {
+          'xi-api-key': ELEVEN_LABS_API_KEY
+        },
+        body: formData
+      })
+
+      const data = await response.json()
+      if (data.voice_id) {
+        setDynamicVoiceId(data.voice_id)
+        console.log("Successfully cloned voice from uploaded file:", data.voice_id)
+      }
+    } catch (error) {
+      console.error("Error creating voice clone from file:", error)
+    }
+  }
+
   const startListening = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       alert("Speech recognition is not supported in this browser.")
@@ -17,48 +44,32 @@ export function useSanctuaryConversation() {
     
     recognition.lang = 'en-US'
     recognition.interimResults = false
-    recognition.maxAlternatives = 1
 
-    recognition.onstart = () => {
-      setIsListening(true)
-    }
-
+    recognition.onstart = () => setIsListening(true)
     recognition.onresult = async (event: any) => {
       const speechText = event.results[0][0].transcript
       setTranscript(speechText)
       setIsListening(false)
-
-      // 2. Send transcribed text to your AI backend / LLM persona
       await handleAiConversation(speechText)
     }
-
-    recognition.onerror = () => {
-      setIsListening(false)
-    }
-
-    recognition.onend = () => {
-      setIsListening(false)
-    }
+    recognition.onerror = () => setIsListening(false)
+    recognition.onend = () => setIsListening(false)
 
     recognition.start()
   }
 
-  // 3. Process conversational response and trigger cloned voice playback
   const handleAiConversation = async (userText: string) => {
-    // Simulated AI response matching grandfather persona
-    const reply = `Hello there. It's so good to see you in here. How are you holding up today?`
+    const reply = "It's so good to hear your voice. I'm right here with you."
     setAiResponse(reply)
-
-    // 4. Call ElevenLabs API (or your backend endpoint) with your voice clone ID
     await playClonedVoice(reply)
   }
 
   const playClonedVoice = async (textToSpeak: string) => {
     const ELEVEN_LABS_API_KEY = 'YOUR_API_KEY_HERE'
-    const VOICE_ID = 'YOUR_GRANDFATHER_CLONED_VOICE_ID'
+    const targetVoiceId = dynamicVoiceId || 'DEFAULT_FALLBACK_VOICE_ID'
 
     try {
-      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${targetVoiceId}`, {
         method: 'POST',
         headers: {
           'Accept': 'audio/mpeg',
@@ -75,11 +86,11 @@ export function useSanctuaryConversation() {
       const blob = await response.blob()
       const audioUrl = URL.createObjectURL(blob)
       const audio = new Audio(audioUrl)
-      audio.play() // In Three.js, this will later be mapped to a PositionalAudio object in the room
+      audio.play()
     } catch (error) {
       console.error("Voice synthesis error:", error)
     }
   }
 
-  return { isListening, transcript, aiResponse, startListening }
+  return { isListening, transcript, aiResponse, startListening, createVoiceCloneFromFile }
 }
