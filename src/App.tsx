@@ -7,7 +7,7 @@ function MemoryCard({ position, color, isFlipped, onClick }) {
     <group position={position} onClick={onClick}>
       <mesh>
         <boxGeometry args={[0.4, 0.6, 0.05]} />
-        <meshStandardMaterial color={isFlipped ? color : '#2a2a2a'} roughness={0.3} />
+        <meshStandardMaterial color={isFlipped ? color : '#555555'} roughness={0.3} />
       </mesh>
     </group>
   )
@@ -51,10 +51,13 @@ function MemoryGame() {
 export default function App() {
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#0a0a0c', position: 'relative', overflow: 'hidden' }}>
-      {/* Title Overlay */}
       <div style={{ position: 'absolute', top: '20px', width: '100%', textAlign: 'center', color: 'white', zIndex: 10, fontFamily: 'sans-serif', pointerEvents: 'none' }}>
         <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>WebXR Spatial Memory</h2>
         <p style={{ margin: '5px 0 0', fontSize: '0.85rem', color: '#888' }}>Click cards to test flipping</p>
+      </div>
+
+      <div style={{ position: 'absolute', bottom: '20px', width: '100%', textAlign: 'center', zIndex: 10 }}>
+        <VRButton style={{ padding: '10px 20px', fontSize: '1rem', background: '#0070f3', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }} />
       </div>
 
       <Canvas camera={{ position: [0, 1.5, 0] }}>
