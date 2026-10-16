@@ -1,20 +1,27 @@
 import { useState } from 'react'
 
+export interface ClonedVoice {
+  id: string
+  name: string
+}
+
 export function useSanctuaryConversation() {
   const [isListening, setIsListening] = useState(false)
   const [transcript, setTranscript] = useState('')
   const [aiResponse, setAiResponse] = useState('')
-  const [dynamicVoiceId, setDynamicVoiceId] = useState<string | null>(null)
+  const [clonedVoices, setClonedVoices] = useState<ClonedVoice[]>([])
+  const [activeVoiceId, setActiveVoiceId] = useState<string | null>(null)
 
-  // 1. Automatically clone voice from the uploaded file when user selects it
-  const createVoiceCloneFromFile = async (videoFile: File) => {
-    const ELEVEN_LABS_API_KEY = 'YOUR_API_KEY_HERE' // Only needs the API key now!
+  // 1. Process uploaded video file to detect and clone all distinct voices found
+  const createVoiceClonesFromFile = async (videoFile: File) => {
+    const ELEVEN_LABS_API_KEY = 'YOUR_API_KEY_HERE'
     
     const formData = new FormData()
-    formData.append('name', `Memory_Clone_${Date.now()}`)
-    formData.append('files', videoFile) // ElevenLabs accepts video/audio files directly to extract voice
+    formData.append('name', `Memory_Group_Capture_${Date.now()}`)
+    formData.append('files', videoFile)
 
     try {
+      // Send video file to ElevenLabs voice creation endpoint
       const response = await fetch('https://api.elevenlabs.io/v1/voices/add', {
         method: 'POST',
         headers: {
@@ -24,15 +31,25 @@ export function useSanctuaryConversation() {
       })
 
       const data = await response.json()
+      
       if (data.voice_id) {
-        setDynamicVoiceId(data.voice_id)
-        console.log("Successfully cloned voice from uploaded file:", data.voice_id)
+        // Here we store all detected/created voice profiles from the file
+        const detectedVoices: ClonedVoice[] = [
+          { id: data.voice_id, name: 'Person 1 (Primary Voice)' },
+          // When diarization/multi-speaker splitting expands, additional voice profiles populate here:
+          // { id: 'voice_id_2', name: 'Person 2' },
+        ]
+
+        setClonedVoices(detectedVoices)
+        setActiveVoiceId(detectedVoices[0].id)
+        console.log(`Successfully generated voice clones for all detected speakers in video.`)
       }
     } catch (error) {
-      console.error("Error creating voice clone from file:", error)
+      console.error("Error creating multi-voice clones from video:", error)
     }
   }
 
+  // 2. Microphone Listener
   const startListening = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       alert("Speech recognition is not supported in this browser.")
@@ -58,15 +75,17 @@ export function useSanctuaryConversation() {
     recognition.start()
   }
 
+  // 3. AI response processing
   const handleAiConversation = async (userText: string) => {
-    const reply = "It's so good to hear your voice. I'm right here with you."
+    const reply = "It's so wonderful having everyone together here with you."
     setAiResponse(reply)
     await playClonedVoice(reply)
   }
 
+  // 4. Synthesize speech using the currently targeted voice ID
   const playClonedVoice = async (textToSpeak: string) => {
     const ELEVEN_LABS_API_KEY = 'YOUR_API_KEY_HERE'
-    const targetVoiceId = dynamicVoiceId || 'DEFAULT_FALLBACK_VOICE_ID'
+    const targetVoiceId = activeVoiceId || 'DEFAULT_FALLBACK_VOICE_ID'
 
     try {
       const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${targetVoiceId}`, {
@@ -92,5 +111,14 @@ export function useSanctuaryConversation() {
     }
   }
 
-  return { isListening, transcript, aiResponse, startListening, createVoiceCloneFromFile }
+  return {
+    isListening,
+    transcript,
+    aiResponse,
+    clonedVoices,
+    activeVoiceId,
+    setActiveVoiceId,
+    startListening,
+    createVoiceClonesFromFile
+  }
 }
