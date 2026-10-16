@@ -1,14 +1,22 @@
-// Inside App.tsx
-  const { isListening, transcript, aiResponse, startListening, createVoiceCloneFromFile } = useSanctuaryConversation()
+const { 
+  isListening, 
+  transcript, 
+  aiResponse, 
+  clonedVoices, 
+  activeVoiceId, 
+  setActiveVoiceId, 
+  startListening, 
+  createVoiceClonesFromFile 
+} = useSanctuaryConversation()
 
-  const handleUploadAndConvert = async () => {
-    if (!selectedFile) return
-    setStatus('processing')
-    
-    // Automatically clone the voice from the uploaded file on ElevenLabs
-    await createVoiceCloneFromFile(selectedFile)
+const handleUploadAndConvert = async () => {
+  if (!selectedFile) return
+  setStatus('processing')
+  
+  // Clone all detected speaker voices from the uploaded video
+  await createVoiceClonesFromFile(selectedFile)
 
-    setTimeout(() => {
-      setStatus('ready')
-    }, 2000)
-  }
+  setTimeout(() => {
+    setStatus('ready')
+  }, 2000)
+}
